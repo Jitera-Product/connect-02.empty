@@ -1,6 +1,7 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { RegisterUserDto } from './dtos/register-user.dto';
+import { VerifyEmailDto } from './dtos/verify-email.dto';
 import { AuthService } from './auth.service';
 
 interface RegistrationResponse {
@@ -19,13 +20,30 @@ interface ErrorResponse {
   message: string;
 }
 
-import { VerifyEmailDto } from './dtos/verify-email.dto';
-import { AuthService } from './auth.service';
-
 @Controller('auth')
 @ApiTags('Auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('send-verification-email')
+  @HttpCode(HttpStatus.OK)
+  async sendVerificationEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+    try {
+      const result = await this.authService.sendVerificationEmail(verifyEmailDto.usernameOrEmail);
+      return {
+        status: HttpStatus.OK,
+        message: "Verification email sent successfully."
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException("Email address not found.");
+      } else if (error instanceof BadRequestException) {
+        throw new BadRequestException("Invalid email format.");
+      } else {
+        throw new Error("An unexpected error occurred on the server.");
+      }
+    }
+  }
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
@@ -36,6 +54,7 @@ export class AuthController {
     } else {
       return { status: 'verification failed', message: result.message };
     }
+  }
 
   @Post('/api/users/signup')
   @HttpCode(HttpStatus.CREATED)
@@ -61,6 +80,5 @@ export class AuthController {
     } catch (error) {
       return { statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR, message: error.response || error.message };
     }
-  }
   }
 }
