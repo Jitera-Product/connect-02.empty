@@ -2,7 +2,6 @@ import { IsNotEmpty, IsAlphanumeric, Length, IsEmail, Matches } from 'class-vali
 
 export class RegisterUserDto {
   @IsNotEmpty()
-  @IsEmail({}, { message: 'Invalid email format' })
   @IsAlphanumeric('en-US', { message: 'Username or email must contain only alphanumeric characters' })
   username_or_email: string;
 

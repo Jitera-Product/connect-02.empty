@@ -1,5 +1,24 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { RegisterUserDto } from './dtos/register-user.dto';
+import { AuthService } from './auth.service';
+
+interface RegistrationResponse {
+  status: number;
+  message: string;
+  user?: {
+    id: number;
+    username_or_email: string;
+    firstname: string;
+    lastname: string;
+  };
+}
+
+interface ErrorResponse {
+  statusCode: number;
+  message: string;
+}
+
 import { VerifyEmailDto } from './dtos/verify-email.dto';
 import { AuthService } from './auth.service';
 
@@ -17,5 +36,31 @@ export class AuthController {
     } else {
       return { status: 'verification failed', message: result.message };
     }
+
+  @Post('/api/users/signup')
+  @HttpCode(HttpStatus.CREATED)
+  async signup(@Body() registerUserDto: RegisterUserDto): Promise<RegistrationResponse | ErrorResponse> {
+    try {
+      const result = await this.authService.registerUser(
+        registerUserDto.username_or_email,
+        registerUserDto.password,
+        registerUserDto.firstname,
+        registerUserDto.lastname,
+      );
+
+      return {
+        status: HttpStatus.CREATED,
+        message: "User registered successfully.",
+        user: {
+          id: result.userId,
+          username_or_email: registerUserDto.username_or_email,
+          firstname: registerUserDto.firstname,
+          lastname: registerUserDto.lastname,
+        },
+      };
+    } catch (error) {
+      return { statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR, message: error.response || error.message };
+    }
+  }
   }
 }
