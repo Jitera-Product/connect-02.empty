@@ -1,6 +1,5 @@
 import {
   registerDecorator,
-  Validator,
   ValidationArguments,
   ValidationOptions,
   ValidatorConstraint,
@@ -8,7 +7,7 @@ import {
 } from 'class-validator';
 import { Injectable } from '@nestjs/common';
 import { EntitySchema, Not, DataSource, ObjectType, FindOptionsWhere } from 'typeorm';
-import { User } from 'src/entities/users';
+import { User } from '../../entities/users.ts'; // Ensure this import path is correct
 
 export interface UniqueValidationArguments<E> extends ValidationArguments {
   constraints: [EntitySchema<E> | ObjectType<E>];
@@ -39,9 +38,13 @@ export class EntityUniqueValidator implements ValidatorConstraintInterface {
   }
 
   defaultMessage<E>(args: UniqueValidationArguments<E>) {
+    // If the entity is User and the field is username_or_email, customize the message
+    if (args.constraints[0] === User && args.property === 'username_or_email') {
+      return `The username or email '${args.value}' is already in use. Please choose another one.`;
+    }
     return `A ${this.dataSource.getRepository(args.constraints[0]).metadata.tableName} with this ${
       args.property
-    } already exists`;
+    } already exists.`;
   }
 }
 
@@ -60,20 +63,5 @@ export function EntityUnique<E>(
   };
 }
 
-@ValidatorConstraint({ name: 'isUsernameOrEmailUnique', async: true })
-@Injectable()
-export class UsernameOrEmailUniqueValidator extends Validator {
-  constructor(protected readonly dataSource: DataSource) {
-    super();
-  }
-
-  async validate(value: string, args: ValidationArguments) {
-    const userRepo = this.dataSource.getRepository(User);
-    const user = await userRepo.findOneBy({ username_or_email: value });
-    return !user;
-  }
-
-  defaultMessage(args: ValidationArguments) {
-    return `The username or email is already in use.`;
-  }
-}
+// The UsernameOrEmailUniqueValidator is removed because its functionality
+// is now covered by the EntityUniqueValidator with the custom message logic.
