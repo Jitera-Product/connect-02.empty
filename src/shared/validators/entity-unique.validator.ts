@@ -1,5 +1,6 @@
 import {
   registerDecorator,
+  Validator,
   ValidationArguments,
   ValidationOptions,
   ValidatorConstraint,
@@ -7,6 +8,7 @@ import {
 } from 'class-validator';
 import { Injectable } from '@nestjs/common';
 import { EntitySchema, Not, DataSource, ObjectType, FindOptionsWhere } from 'typeorm';
+import { User } from 'src/entities/users';
 
 export interface UniqueValidationArguments<E> extends ValidationArguments {
   constraints: [EntitySchema<E> | ObjectType<E>];
@@ -56,4 +58,22 @@ export function EntityUnique<E>(
       validator: EntityUniqueValidator,
     });
   };
+}
+
+@ValidatorConstraint({ name: 'isUsernameOrEmailUnique', async: true })
+@Injectable()
+export class UsernameOrEmailUniqueValidator extends Validator {
+  constructor(protected readonly dataSource: DataSource) {
+    super();
+  }
+
+  async validate(value: string, args: ValidationArguments) {
+    const userRepo = this.dataSource.getRepository(User);
+    const user = await userRepo.findOneBy({ username_or_email: value });
+    return !user;
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return `The username or email is already in use.`;
+  }
 }
